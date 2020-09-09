@@ -33,6 +33,8 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", dest="outfile", metavar="OUTFILE", type=argparse.FileType('wb'),
             required=True,
             help="File name to write data dump. Example: -o /tmp/i2c_dump.bin")
+    parser.add_argument("-a", "--i2c_address", dest="iaddr", default="0xa1",
+                        help="The EEPROM i2c address (hex). Example: -a 0xa1")
     parser.add_argument("-d", "--serial-port", dest="bp", default="/dev/ttyUSB0",
                         help="The comm device to connect to. Example: -d /dev/ttyUSB0")
     parser.add_argument("-b", "--block-size", dest="bsize", default=256, type=int,
@@ -46,6 +48,12 @@ if __name__ == '__main__':
 
     #NOTE: Leave USB speed at max because it never really changes when using the BusPirate.
     i2c = I2C(args.bp, 115200)
+
+    try:
+        iaddr= int(args.iaddr, 16)
+    except:
+        print("Invalid i2c address!")
+        sys.exit()
 
     # get to known state  - should work in any mode
     print("Entering binmode: ",)
@@ -69,12 +77,12 @@ if __name__ == '__main__':
     i2c.speed= args.i2c_speed
     i2c.timeout(2.5) # need to calculate this from speed!
     
-    print("Dumping %d bytes out of the EEPROM." % args.size)
+    print("Dumping %d bytes out of the EEPROM at 0x%02x." % (args.size, iaddr))
 
     # Start dumping 
     for block in range(0, args.size, args.bsize):
-        print("read block 0x%02x" % (0xa1 +  ((int) (block / args.bsize) << 1)))
-        data= i2c.write_then_read(0x01, args.bsize, [0xa1]) # just let chip read out sequentialy
+        print("read %d" % (block + args.bsize))
+        data= i2c.write_then_read(0x01, args.bsize, [iaddr]) # just let chip read out sequentialy
         args.outfile.write(data)
     args.outfile.close()
 
